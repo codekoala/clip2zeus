@@ -33,6 +33,9 @@ class Clip2ZeusApp(object):
         if sys.platform in ('nt', 'win32'):
             import win32
             return win32.Clip2ZeusWin32
+        elif sys.platform in ('darwin', ):
+            import osx
+            return osx.Clip2ZeusOSX
         else:
             raise UnsupportedPlatformError
 
