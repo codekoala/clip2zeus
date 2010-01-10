@@ -25,6 +25,7 @@ setup(
     maintainer='Josh VanderLinden',
     license='MIT',
     console=['clip2zeus/clip2zeus.py'],
+    scripts=['clip2zeus/clip2zeus'],
     package_dir={'': 'clip2zeus'},
     packages=[''],
     excludes=excludes,

@@ -1,2 +1,2 @@
-from clip2zeus import APP_TITLE, __version__
+from .clip2zeus import main, APP_TITLE, __version__
 
