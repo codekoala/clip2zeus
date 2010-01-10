@@ -72,8 +72,8 @@ class Clip2ZeusApp(object):
 
         for match in matches:
             match = filter(lambda s: s.strip() or '', match)
-            url = match[0]
-            domain = match[2]
+            url = match[0].strip()
+            domain = match[2].strip()
 
             if domain not in INVALID_DOMAINS:
                 # Try to shorten this URL using 2ze.us
@@ -90,9 +90,13 @@ class Clip2ZeusApp(object):
                 else:
                     update_data = True
                     raw = c.read()
-                    json = simplejson.loads(raw)
+                    try:
+                        json = simplejson.loads(raw)
+                    except (ValueError, ):
+                        json = None
 
-                data = data.replace(url, json['urls'][url]['shortcut'])
+                if json:
+                    data = data.replace(url, json['urls'][url]['shortcut'])
 
         if update_data:
             self.data = data

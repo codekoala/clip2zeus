@@ -1,13 +1,8 @@
-from AppKit import *
+import subprocess
 import time
 from common import Clip2ZeusApp
 
 class Clip2ZeusOSX(Clip2ZeusApp):
-
-    def __init__(self):
-        super(Clip2ZeusOSX, self).__init__()
-
-        self.pb = NSPasteboard.generalPasteboard()
 
     def monitor_clipboard(self):
         """Regularly checks the system clipboard for data"""
@@ -16,7 +11,7 @@ class Clip2ZeusOSX(Clip2ZeusApp):
             while True:
                 # only bother processing if we have a connection
                 if self.has_connection:
-                    data = self.pb.stringForType_(NSStringPboardType).mutableCopy()
+                    data = subprocess.Popen('/usr/bin/pbpaste', stdout=subprocess.PIPE).stdout.read()
 
                     if data != self.data:
                         self.process_clipboard(data)
@@ -27,6 +22,9 @@ class Clip2ZeusOSX(Clip2ZeusApp):
     def update_clipboard(self, text):
         """Updates the system clipboard with the specified text"""
 
-        self.pb.declareTypes_owner_([NSStringPboardType], None)
-        self.pb.setString_forType_(text, NSStringPboardType)
+        echo = subprocess.Popen(['/bin/echo', '%s' % text.replace('"', '\"')], stdout=subprocess.PIPE)
+        copy = subprocess.Popen(['/usr/bin/pbcopy'], stdin=echo.stdout, stdout=subprocess.PIPE)
+        output, errs = copy.communicate()
 
+if __name__ == '__main__':
+    Clip2ZeusOSX()
