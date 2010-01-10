@@ -12,7 +12,7 @@ URL_RE = re.compile('((\w+)://([^/]+)/?([^ \n\r]*))', re.I | re.M)
 INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
-TIMEOUT_SEC = 1 # Number of seconds to wait on 2ze.us before giving up
+TIMEOUT_SEC = 10 # Number of seconds to wait on 2ze.us before giving up
 
 class UnsupportedPlatformError(StandardError): pass
 
@@ -45,7 +45,7 @@ class Clip2ZeusApp(object):
         if self.last_check is None or now - self.last_check > self.threshold:
             try:
                 urllib2.urlopen('http://2ze.us/')
-            except urllib2.HTTPError:
+            except (urllib2.HTTPError, urllib2.URLError):
                 self._has_connection = False
             else:
                 self._has_connection = True
@@ -80,7 +80,7 @@ class Clip2ZeusApp(object):
 
                 try:
                     c = urllib2.urlopen('http://2ze.us/generate/', params)
-                except urllib2.HTTPError:
+                except (urllib2.HTTPError, urllib2.URLError):
                     # do something?
                     update_data = False
                     break
