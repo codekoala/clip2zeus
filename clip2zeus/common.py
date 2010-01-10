@@ -8,7 +8,8 @@ import urllib
 import urllib2
 
 APP_TITLE = 'Clip2Zeus'
-URL_RE = re.compile('((\w+)://([^/ \n\r]+)(/?[^ \n\r]*))', re.I | re.M)
+DELIM = ' \n\r<>"\''
+URL_RE = re.compile('((\w+)://([^/%s]+)(/?[^%s]*))' % (DELIM, DELIM), re.I | re.M)
 INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)

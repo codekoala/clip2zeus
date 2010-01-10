@@ -6,7 +6,7 @@ using 2ze.us"""
 
 from common import *
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 def main():
     clip2zeus = Clip2ZeusApp.for_platform()
