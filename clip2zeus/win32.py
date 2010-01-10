@@ -60,3 +60,6 @@ class Clip2ZeusWin32(Clip2ZeusApp):
 
         self.do_clipboard_operation(set_data, text=text)
 
+if __name__ == '__main__':
+    Clip2ZeusWin32()
+
