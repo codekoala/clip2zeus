@@ -8,7 +8,7 @@ import urllib
 import urllib2
 
 APP_TITLE = 'Clip2Zeus'
-URL_RE = re.compile('((\w+)://([^/]+)/?([^ \n\r]*))', re.I | re.M)
+URL_RE = re.compile('((\w+)://([^/ \n\r]+)(/?[^ \n\r]*))', re.I | re.M)
 INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
@@ -30,14 +30,18 @@ class Clip2ZeusApp(object):
     def for_platform():
         """Returns a platform-specific version of the application"""
 
-        if sys.platform in ('nt', 'win32'):
+        platform = sys.platform
+        if platform in ('nt', 'win32'):
             import win32
             return win32.Clip2ZeusWin32
-        elif sys.platform in ('darwin', ):
+        elif platform in ('darwin', ):
             import osx
             return osx.Clip2ZeusOSX
+        elif platform in ('linux', 'linux2'):
+            import linux
+            return linux.Clip2ZeusLinux
         else:
-            raise UnsupportedPlatformError
+            raise UnsupportedPlatformError('%s is not currently supported!' % platform)
 
     @property
     def has_connection(self):
