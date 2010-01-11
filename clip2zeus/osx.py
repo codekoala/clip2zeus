@@ -22,7 +22,7 @@ class Clip2ZeusOSX(Clip2ZeusApp):
     def update_clipboard(self, text):
         """Updates the system clipboard with the specified text"""
 
-        echo = subprocess.Popen(['/bin/echo', '%s' % text.replace('"', '\"')], stdout=subprocess.PIPE)
+        echo = subprocess.Popen(['/bin/echo', '-n', '%s' % text.replace('"', '\"')], stdout=subprocess.PIPE)
         copy = subprocess.Popen(['/usr/bin/pbcopy'], stdin=echo.stdout, stdout=subprocess.PIPE)
         output, errs = copy.communicate()
 
