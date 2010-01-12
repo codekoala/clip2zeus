@@ -49,9 +49,11 @@ class Clip2ZeusApp(object):
         self.btn_shorten.pack(side=LEFT)
         self.btn_quit.pack(side=LEFT)
 
+        self.parent.after(1000, self.monitor_clipboard)
+
     def start(self):
         """Begins processing"""
-        self.monitor_clipboard()
+        #self.monitor_clipboard()
         self.parent.mainloop()
 
     @staticmethod
