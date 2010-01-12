@@ -11,6 +11,10 @@ from common import Clip2ZeusApp
 
 class Clip2ZeusWin32(Clip2ZeusApp):
 
+    def build_gui(self):
+        super(Clip2ZeusWin32, self).build_gui()
+        self.parent.wm_attributes('-topmost', 1)
+
     def do_clipboard_operation(self, func, *args, **kwargs):
         """Performs a quick clipboard operation, wrapping it with safety nets"""
 
@@ -33,23 +37,15 @@ class Clip2ZeusWin32(Clip2ZeusApp):
 
         return result
 
-    def monitor_clipboard(self):
-        """Regularly checks the system clipboard for data"""
+    def check_clipboard(self):
+        """Checks the system clipboard for data"""
+
+        print 'checking'
 
         def get_data():
             return w.GetClipboardData(w.CF_TEXT)
 
-        try:
-            while True:
-                # only bother processing if we have a connection
-                if self.has_connection:
-                    data = self.do_clipboard_operation(get_data)
-                    if data != self.data:
-                        self.process_clipboard(data)
-
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.quit()
+        return self.do_clipboard_operation(get_data)
 
     def update_clipboard(self, text):
         """Updates the system clipboard with the specified text"""
@@ -61,5 +57,7 @@ class Clip2ZeusWin32(Clip2ZeusApp):
         self.do_clipboard_operation(set_data, text=text)
 
 if __name__ == '__main__':
-    Clip2ZeusWin32()
+    from Tkinter import Tk
+    root = Tk()
+    Clip2ZeusWin32(root).start()
 

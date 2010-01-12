@@ -1,3 +1,4 @@
+from Tkinter import *
 from datetime import datetime, timedelta
 import re
 import simplejson
@@ -19,13 +20,39 @@ class UnsupportedPlatformError(StandardError): pass
 
 class Clip2ZeusApp(object):
 
-    def __init__(self):
+    def __init__(self, parent=None, *args, **kwargs):
+        """Creates the container for common functionality"""
+
+        if parent is None:
+            parent = Tk()
+
+        self.parent = parent
+
         self.data = ''
         self._has_connection = False
         self.last_check = None
         self.threshold = timedelta(seconds=HEARTBEAT_INT)
         socket.setdefaulttimeout(TIMEOUT_SEC)
+
+        self.build_gui()
+
+    def build_gui(self):
+        """Constructs the GUI"""
+
+        self.frame = Frame(self.parent)
+        self.parent.title(APP_TITLE)
+        self.frame.pack()
+
+        self.btn_shorten = Button(self.frame, text="Shorten", command=self.check_clipboard)
+        self.btn_quit = Button(self.frame, text="Quit", command=self.quit)
+
+        self.btn_shorten.pack(side=LEFT)
+        self.btn_quit.pack(side=LEFT)
+
+    def start(self):
+        """Begins processing"""
         self.monitor_clipboard()
+        self.parent.mainloop()
 
     @staticmethod
     def for_platform():
@@ -62,9 +89,25 @@ class Clip2ZeusApp(object):
 
         return self._has_connection
 
+    def check_clipboard(self):
+        """Checks the system clipboard for data"""
+        pass
+
     def monitor_clipboard(self):
         """Regularly checks the system clipboard for data"""
-        pass
+
+        try:
+            while True:
+                # only bother processing if we have a connection
+                if self.has_connection:
+                    data = self.check_clipboard()
+
+                    if data and data != self.data:
+                        self.process_clipboard(data)
+
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.quit()
 
     def process_clipboard(self, data):
         """Examines the clipboard contents for a URL.
@@ -116,4 +159,6 @@ class Clip2ZeusApp(object):
         """Takes care of cleaning up"""
 
         print 'Exiting.'
+        self.frame.quit()
+        time.sleep(1)
 
