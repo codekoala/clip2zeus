@@ -21,6 +21,16 @@ DEFAULT_PORT = 14694
 
 class UnsupportedPlatformError(StandardError): pass
 
+class Server(SimpleXMLRPCServer):
+
+    def serve_forever(self):
+        self.quit = False
+        while not self.quit:
+            self.handle_request()
+
+    def kill(self):
+        self.quit = True
+
 class Clip2ZeusApp(object):
 
     EXPOSED = ('help', 'set_interval', 'shorten_urls', 'quit')
@@ -56,7 +66,7 @@ class Clip2ZeusApp(object):
         """Starts the XML-RPC server"""
 
         try:
-            self.server = SimpleXMLRPCServer(('localhost', self.port), allow_none=True)
+            self.server = Server(('localhost', self.port), allow_none=True)
             self.expose_api()
             self.server.serve_forever()
         except socket.error, err:
@@ -144,19 +154,17 @@ class Clip2ZeusApp(object):
         """Regularly checks the system clipboard for data"""
 
         while True:
-            if self.thread_event.isSet():
-                break
-
-            try:
-                self.shorten_urls()
-            except KeyboardInterrupt:
-                self.quit()
-
             if self.interval <= 0:
                 wait = 1
             else:
                 wait = self.interval
+
             self.thread_event.wait(wait)
+            if self.thread_event.isSet():
+                break
+
+            if self.interval > 0:
+                self.shorten_urls()
 
     def shorten_urls(self):
         """Shortens any URLs that are currently in the clipboard"""
@@ -214,11 +222,8 @@ class Clip2ZeusApp(object):
 
         print 'Exiting.'
         self.thread_event.set()
-        print 'event set'
         self.monitor_thread.join()
-        print 'event joined'
-        self.server.server_close() # see if there's a better way to handle this
-        print 'server closed'
+        self.server.kill()
 
 class Clip2ZeusCtl(object):
     """
