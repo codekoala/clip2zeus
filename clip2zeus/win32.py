@@ -3,17 +3,14 @@
 
 """
 Monitors the Windows system clipboard for text that contains URLs for conversion
-using 2ze.us"""
+using 2ze.us
+"""
 
 import time
 import win32clipboard as w
 from common import Clip2ZeusApp
 
 class Clip2ZeusWin32(Clip2ZeusApp):
-
-    def build_gui(self):
-        super(Clip2ZeusWin32, self).build_gui()
-        self.parent.wm_attributes('-topmost', 1)
 
     def do_clipboard_operation(self, func, *args, **kwargs):
         """Performs a quick clipboard operation, wrapping it with safety nets"""
@@ -40,8 +37,6 @@ class Clip2ZeusWin32(Clip2ZeusApp):
     def check_clipboard(self):
         """Checks the system clipboard for data"""
 
-        print 'checking'
-
         def get_data():
             return w.GetClipboardData(w.CF_TEXT)
 
@@ -57,7 +52,5 @@ class Clip2ZeusWin32(Clip2ZeusApp):
         self.do_clipboard_operation(set_data, text=text)
 
 if __name__ == '__main__':
-    from Tkinter import Tk
-    root = Tk()
-    Clip2ZeusWin32(root).start()
+    Clip2ZeusWin32().start()
 

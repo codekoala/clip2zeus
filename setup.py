@@ -1,5 +1,5 @@
 from distutils.core import setup
-from clip2zeus import APP_TITLE, __version__
+from clip2zeus import APP_TITLE, __version__, __author__
 import sys
 
 extra = dict()
@@ -29,13 +29,16 @@ setup(
         periodically polls your system clipboard.  If a URL is found somewhere in your
         clipboard, the application will attempt to shorten the URL using http://2ze.us/""",
     keywords='url-shortening, utilities',
-    author='Josh VanderLinden',
+    author=__author__,
     author_email='codekoala at gmail com',
-    maintainer='Josh VanderLinden',
+    maintainer=__author__,
     maintainer_email='codekoala at gmail com',
     url='http://www.codekoala.com/',
     license='MIT',
-    scripts=['clip2zeus/clip2zeus'],
+    scripts=[
+        'clip2zeus/scripts/clip2zeus',
+        'clip2zeus/scripts/clip2zeusctl'
+    ],
     package_dir={'': 'clip2zeus'},
     packages=[''],
     platforms=[

@@ -17,9 +17,7 @@ INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
 TIMEOUT_SEC = 10 # Number of seconds to wait on 2ze.us before giving up
-
-ID_MANUAL = 100
-ID_AUTO = 110
+DEFAULT_PORT = 14694
 
 class UnsupportedPlatformError(StandardError): pass
 
@@ -52,12 +50,10 @@ class Clip2ZeusApp(object):
 
     EXPOSED = ('help', 'set_interval', 'shorten_urls', 'quit')
 
-    def __init__(self, port=8000):
+    def __init__(self, port=DEFAULT_PORT):
         """Creates the container for common functionality"""
 
         self.port = int(port)
-        self.server = SimpleXMLRPCServer(('localhost', self.port), allow_none=True)
-        self.expose_api()
 
         self.data = ''
         self._has_connection = False
@@ -84,10 +80,14 @@ class Clip2ZeusApp(object):
         """Starts the XML-RPC server"""
 
         try:
+            self.server = SimpleXMLRPCServer(('localhost', self.port), allow_none=True)
+            self.expose_api()
             self.server.serve_forever()
         except socket.error as err:
             # my sad excuse for a graceful termination
             if err.errno == 9:
+                pass
+            elif err.errno == 48: # address already used
                 pass
             else:
                 raise err
@@ -228,18 +228,52 @@ class Clip2ZeusCtl(object):
     after backgrounding it.
     """
 
-    def __init__(self, cmd, args, port=8000):
+    def __init__(self, port=DEFAULT_PORT):
         self.port = port
         self.proxy = None
         self.connect()
 
-        if cmd == 'help':
-            self.help(*args)
-        elif cmd in Clip2ZeusApp.EXPOSED:
-            func = getattr(self.proxy, cmd)
-            func(*args)
+    def launch_server(self):
+        """Launches the server if needed--not a good idea with the CLI command"""
+
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('localhost', DEFAULT_PORT))
+        except socket.error as err:
+            if err.errno == 48: # address already in use
+                pass
+            else:
+                raise err
         else:
-            sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))
+            sock.close()
+            from clip2zeus import main
+            self.server_thread = Thread(target=main)
+            self.server_thread.start()
+            time.sleep(1)
+
+    def notify(self, message):
+        """Tells the user something"""
+
+        print message
+
+    def execute_command(self, cmd, args=[]):
+        """Calls a command using the XML-RPC proxy"""
+
+        try:
+            if cmd == 'help':
+                self.help(*args)
+            elif cmd in Clip2ZeusApp.EXPOSED:
+                func = getattr(self.proxy, cmd)
+                func(*args)
+            else:
+                sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))
+        except socket.error as err:
+            self.notify('Failed to connect to application: %s' % err)
+
+            if err.errno == 61:
+                sys.exit(1)
+        except xmlrpclib.Fault as fault:
+            self.notify('%s' % fault)
 
     def connect(self, port=None):
         """Attempt to connect to the XML-RPC server"""
