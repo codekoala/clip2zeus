@@ -1,1 +1,1 @@
-include LICENSE clip2zeus/*.py clip2zeus/common.py
+include LICENSE clip2zeus/*.py clip2zeus/common.py clip2zeus/scripts/*

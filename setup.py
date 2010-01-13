@@ -37,10 +37,11 @@ setup(
     license='MIT',
     scripts=[
         'clip2zeus/scripts/clip2zeus',
-        'clip2zeus/scripts/clip2zeusctl'
+        'clip2zeus/scripts/clip2zeusctl',
+        'clip2zeus/scripts/tkclip2zeus',
     ],
-    package_dir={'': 'clip2zeus'},
-    packages=[''],
+    package_dir={'clip2zeus': 'clip2zeus'},
+    packages=['clip2zeus'],
     platforms=[
         'Windows',
         'OSX',

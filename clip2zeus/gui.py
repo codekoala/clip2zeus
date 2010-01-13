@@ -91,6 +91,9 @@ class Clip2ZeusTk(Clip2ZeusCtl):
         self.execute_command('quit')
         sys.exit(0)
 
-if __name__ == '__main__':
+def main():
     Clip2ZeusTk()
+
+if __name__ == '__main__':
+    main()
 

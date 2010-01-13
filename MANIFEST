@@ -1,9 +1,13 @@
 LICENSE
 setup.py
 clip2zeus/__init__.py
-clip2zeus/clip2zeus
 clip2zeus/clip2zeus.py
+clip2zeus/clip2zeus_ctl.py
 clip2zeus/common.py
+clip2zeus/gui.py
 clip2zeus/linux.py
 clip2zeus/osx.py
 clip2zeus/win32.py
+clip2zeus/scripts/clip2zeus
+clip2zeus/scripts/clip2zeusctl
+clip2zeus/scripts/tkclip2zeus
