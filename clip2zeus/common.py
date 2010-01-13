@@ -1,6 +1,6 @@
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from datetime import datetime, timedelta
-from threading import Thread
+from threading import Thread, Event
 import re
 import simplejson
 import socket
@@ -21,31 +21,6 @@ DEFAULT_PORT = 14694
 
 class UnsupportedPlatformError(StandardError): pass
 
-class Monitor(Thread):
-    """Regularly checks the system clipboard for data"""
-
-    def __init__(self, *args, **kwargs):
-        self.app = kwargs.pop('app')
-        super(Monitor, self).__init__(*args, **kwargs)
-
-    def run(self):
-        self._continue_processing = True
-
-        while self._continue_processing:
-            # don't do anything if the user only wants manual shortening
-            if self.app.interval <= 0:
-                time.sleep(1)
-                continue
-
-            try:
-                self.app.shorten_urls()
-                time.sleep(self.app.interval)
-            except KeyboardInterrupt:
-                self.app.quit()
-
-    def close(self):
-        self._continue_processing = False
-
 class Clip2ZeusApp(object):
 
     EXPOSED = ('help', 'set_interval', 'shorten_urls', 'quit')
@@ -62,7 +37,8 @@ class Clip2ZeusApp(object):
         self.threshold = timedelta(seconds=HEARTBEAT_INT)
         socket.setdefaulttimeout(TIMEOUT_SEC)
 
-        self.monitor_thread = Monitor(app=self)
+        self.thread_event = Event()
+        self.monitor_thread = Thread(target=self.monitor_clipboard)
 
     def expose_api(self):
         """Exposes a collection of commands for the XML-RPC server"""
@@ -83,11 +59,12 @@ class Clip2ZeusApp(object):
             self.server = SimpleXMLRPCServer(('localhost', self.port), allow_none=True)
             self.expose_api()
             self.server.serve_forever()
-        except socket.error as err:
+        except socket.error, err:
             # my sad excuse for a graceful termination
-            if err.errno == 9:
+            errno = err[0]
+            if errno == 9:
                 pass
-            elif err.errno == 48: # address already used
+            elif errno == 48: # address already used
                 pass
             else:
                 raise err
@@ -163,6 +140,24 @@ class Clip2ZeusApp(object):
         except (TypeError, ValueError):
             raise TypeError('Please specify an integer that is 0 or greater.')
 
+    def monitor_clipboard(self):
+        """Regularly checks the system clipboard for data"""
+
+        while True:
+            if self.thread_event.isSet():
+                break
+
+            try:
+                self.shorten_urls()
+            except KeyboardInterrupt:
+                self.quit()
+
+            if self.interval <= 0:
+                wait = 1
+            else:
+                wait = self.interval
+            self.thread_event.wait(wait)
+
     def shorten_urls(self):
         """Shortens any URLs that are currently in the clipboard"""
 
@@ -218,9 +213,12 @@ class Clip2ZeusApp(object):
         """Ends processing"""
 
         print 'Exiting.'
-        self.monitor_thread.close()
+        self.thread_event.set()
+        print 'event set'
+        self.monitor_thread.join()
+        print 'event joined'
         self.server.server_close() # see if there's a better way to handle this
-        return 0
+        print 'server closed'
 
 class Clip2ZeusCtl(object):
     """
@@ -239,8 +237,8 @@ class Clip2ZeusCtl(object):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.bind(('localhost', DEFAULT_PORT))
-        except socket.error as err:
-            if err.errno == 48: # address already in use
+        except socket.error, err:
+            if err[0] == 48: # address already in use
                 pass
             else:
                 raise err
@@ -267,12 +265,12 @@ class Clip2ZeusCtl(object):
                 func(*args)
             else:
                 sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))
-        except socket.error as err:
+        except socket.error, err:
             self.notify('Failed to connect to application: %s' % err)
 
-            if err.errno == 61:
+            if err[0] == 61:
                 sys.exit(1)
-        except xmlrpclib.Fault as fault:
+        except xmlrpclib.Fault, fault:
             self.notify('%s' % fault)
 
     def connect(self, port=None):

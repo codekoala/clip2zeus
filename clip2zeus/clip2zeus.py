@@ -9,7 +9,7 @@ using 2ze.us
 from common import *
 
 __author__ = 'Josh VanderLinden'
-__version__ = '0.8a'
+__version__ = '0.8d'
 
 def main():
     from optparse import OptionParser
