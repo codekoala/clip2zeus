@@ -1,5 +1,6 @@
-from Tkinter import *
+from SimpleXMLRPCServer import SimpleXMLRPCServer
 from datetime import datetime, timedelta
+from threading import Thread
 import re
 import simplejson
 import socket
@@ -7,54 +8,91 @@ import sys
 import time
 import urllib
 import urllib2
+import xmlrpclib
 
 APP_TITLE = 'Clip2Zeus'
 DELIM = ' \n\r<>"\''
-URL_RE = re.compile('((\w+)://([^/%s]+)(/?[^%s]*))' % (DELIM, DELIM), re.I | re.M)
+URL_RE = re.compile('((\w+)://([^/%%%s]+)(/?[^%s]*))' % (DELIM, DELIM), re.I | re.M)
 INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
 TIMEOUT_SEC = 10 # Number of seconds to wait on 2ze.us before giving up
 
+ID_MANUAL = 100
+ID_AUTO = 110
+
 class UnsupportedPlatformError(StandardError): pass
+
+class Monitor(Thread):
+    """Regularly checks the system clipboard for data"""
+
+    def __init__(self, *args, **kwargs):
+        self.app = kwargs.pop('app')
+        super(Monitor, self).__init__(*args, **kwargs)
+
+    def run(self):
+        self._continue_processing = True
+
+        while self._continue_processing:
+            # don't do anything if the user only wants manual shortening
+            if self.app.interval <= 0:
+                time.sleep(1)
+                continue
+
+            try:
+                self.app.shorten_urls()
+                time.sleep(self.app.interval)
+            except KeyboardInterrupt:
+                self.app.quit()
+
+    def close(self):
+        self._continue_processing = False
 
 class Clip2ZeusApp(object):
 
-    def __init__(self, parent=None, *args, **kwargs):
+    EXPOSED = ('help', 'set_interval', 'shorten_urls', 'quit')
+
+    def __init__(self, port=8000):
         """Creates the container for common functionality"""
 
-        if parent is None:
-            parent = Tk()
-
-        self.parent = parent
+        self.port = int(port)
+        self.server = SimpleXMLRPCServer(('localhost', self.port), allow_none=True)
+        self.expose_api()
 
         self.data = ''
         self._has_connection = False
         self.last_check = None
+        self.interval = 1
         self.threshold = timedelta(seconds=HEARTBEAT_INT)
         socket.setdefaulttimeout(TIMEOUT_SEC)
 
-        self.build_gui()
+        self.monitor_thread = Monitor(app=self)
 
-    def build_gui(self):
-        """Constructs the GUI"""
+    def expose_api(self):
+        """Exposes a collection of commands for the XML-RPC server"""
 
-        self.frame = Frame(self.parent)
-        self.parent.title(APP_TITLE)
-        self.frame.pack()
-
-        self.btn_shorten = Button(self.frame, text="Shorten", command=self.check_clipboard)
-        self.btn_quit = Button(self.frame, text="Quit", command=self.quit)
-
-        self.btn_shorten.pack(side=LEFT)
-        self.btn_quit.pack(side=LEFT)
-
-        self.parent.after(1000, self.monitor_clipboard)
+        for func in Clip2ZeusApp.EXPOSED:
+            self.server.register_function(getattr(self, func))
 
     def start(self):
         """Begins processing"""
-        #self.monitor_clipboard()
-        self.parent.mainloop()
+
+        self.monitor_thread.start()
+        self.start_server()
+
+    def start_server(self):
+        """Starts the XML-RPC server"""
+
+        try:
+            self.server.serve_forever()
+        except socket.error as err:
+            # my sad excuse for a graceful termination
+            if err.errno == 9:
+                pass
+            else:
+                raise err
+        except KeyboardInterrupt:
+            self.quit()
 
     @staticmethod
     def for_platform():
@@ -91,25 +129,49 @@ class Clip2ZeusApp(object):
 
         return self._has_connection
 
+    def help(self, func=None):
+        """Provides further information about a particular command"""
+
+        if func is None:
+            return self.help.__doc__
+        elif func in Clip2ZeusApp.EXPOSED:
+            return getattr(self, func).__doc__
+        else:
+            return "Invalid command."
+
     def check_clipboard(self):
         """Checks the system clipboard for data"""
+
         pass
 
-    def monitor_clipboard(self):
-        """Regularly checks the system clipboard for data"""
+    def update_clipboard(self, text):
+        """Updates the system clipboard with the specified text"""
+
+        pass
+
+    def set_interval(self, interval):
+        """Sets the clipboard polling frequency.
+
+        Accepts one parameter: the number of seconds between clipboard polls.
+        Use 0 to represent manual invocation."""
 
         try:
-            while True:
-                # only bother processing if we have a connection
-                if self.has_connection:
-                    data = self.check_clipboard()
+            self.interval = int(interval)
 
-                    if data and data != self.data:
-                        self.process_clipboard(data)
+            if self.interval < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise TypeError('Please specify an integer that is 0 or greater.')
 
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.quit()
+    def shorten_urls(self):
+        """Shortens any URLs that are currently in the clipboard"""
+
+        # only bother processing if we have a connection
+        if self.has_connection:
+            data = self.check_clipboard()
+
+            if data and data != self.data:
+                self.process_clipboard(data)
 
     def process_clipboard(self, data):
         """Examines the clipboard contents for a URL.
@@ -152,15 +214,46 @@ class Clip2ZeusApp(object):
             self.data = data
             self.update_clipboard(self.data)
 
-    def update_clipboard(self, text):
-        """Updates the system clipboard with the specified text"""
-
-        pass
-
     def quit(self):
-        """Takes care of cleaning up"""
+        """Ends processing"""
 
         print 'Exiting.'
-        self.frame.quit()
-        time.sleep(1)
+        self.monitor_thread.close()
+        self.server.server_close() # see if there's a better way to handle this
+        return 0
+
+class Clip2ZeusCtl(object):
+    """
+    An XML-RPC controller for Clip2Zeus, so you can still control the app
+    after backgrounding it.
+    """
+
+    def __init__(self, cmd, args, port=8000):
+        self.port = port
+        self.proxy = None
+        self.connect()
+
+        if cmd == 'help':
+            self.help(*args)
+        elif cmd in Clip2ZeusApp.EXPOSED:
+            func = getattr(self.proxy, cmd)
+            func(*args)
+        else:
+            sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))
+
+    def connect(self, port=None):
+        """Attempt to connect to the XML-RPC server"""
+
+        try:
+            port = port or self.port
+            self.proxy = xmlrpclib.ServerProxy('http://localhost:%s/' % port, allow_none=True)
+        except Exception, e:
+            print e
+        else:
+            self.port = port
+
+    def help(self, func=None):
+        """Calls the help function on the server"""
+
+        print self.proxy.help(func)
 

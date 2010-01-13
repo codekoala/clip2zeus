@@ -5,29 +5,22 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import time
+
 from common import Clip2ZeusApp
 
 class Clip2ZeusLinux(Clip2ZeusApp):
 
-    def monitor_clipboard(self):
-        """Regularly checks the system clipboard for data"""
+    def check_clipboard(self):
+        """Checks the system clipboard for data"""
 
-        try:
-            while True:
-                # only bother processing if we have a connection
-                if self.has_connection:
-                    clipboard = gtk.clipboard_get()
-                    data = clipboard.wait_for_text()
-
-                    if data and data != self.data:
-                        self.process_clipboard(data)
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.quit()
+        print 'Checking in linux'
+        clipboard = gtk.clipboard_get()
+        return clipboard.wait_for_text()
 
     def update_clipboard(self, text):
         """Updates the system clipboard with the specified text"""
 
+        print 'Updating in linux'
         clipboard = gtk.clipboard_get()
         clipboard.set_text(text)
         clipboard.store()
