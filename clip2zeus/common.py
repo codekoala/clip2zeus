@@ -1,14 +1,24 @@
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 from datetime import datetime, timedelta
 from threading import Thread, Event
+import logging
 import re
-import simplejson
+
+try:
+    # Python 2.6+
+    import json
+except ImportError:
+    import simplejson as json
+    
 import socket
 import sys
 import time
 import urllib
 import urllib2
 import xmlrpclib
+
+__author__ = 'Josh VanderLinden'
+__version__ = '0.8e'
 
 APP_TITLE = 'Clip2Zeus'
 DELIM = ' \n\r<>"\''
@@ -18,10 +28,41 @@ INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
 HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
 TIMEOUT_SEC = 10 # Number of seconds to wait on 2ze.us before giving up
 DEFAULT_PORT = 14694
+LOG_FILE = 'clip2zeus.log'
+LOG_LEVEL = logging.DEBUG
+FORMAT = '%(asctime)10s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
+
+logging.basicConfig(level=LOG_LEVEL,
+                    format='%(levelname)-8s %(asctime)s %(module)s:%(lineno)d %(message)s',
+                    datefmt='%d.%m %H:%M:%S',
+                    filename=LOG_FILE,
+                    filemode='a')
+logger = logging.getLogger('Clip2Zeus')
+
+def port_is_free(port):
+    """Ensures that a port is available for binding"""
+
+    try:
+        port = int(port)
+        logger.debug('Testing port %s' % port)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('localhost', port))
+    except socket.error, err:
+        logger.debug('Caught an exception: %s' % (err, ))
+        logger.debug(err[0], type(err[0]))
+        if err[0] in (48, 10048, 10061): # address already in use
+            return False
+        else:
+            raise err
+    else:
+        logger.debug('I was able to bind to port %s... unbinding.' % port)
+        sock.close()
+        return True
 
 class UnsupportedPlatformError(StandardError): pass
 
 class Server(SimpleXMLRPCServer):
+    """Wrapper to allow more graceful termination"""
 
     def serve_forever(self):
         self.quit = False
@@ -38,6 +79,8 @@ class Clip2ZeusApp(object):
     def __init__(self, port=DEFAULT_PORT):
         """Creates the container for common functionality"""
 
+        logger.debug('Starting %s v%s' % (APP_TITLE, __version__))
+
         self.port = int(port)
 
         self.data = ''
@@ -53,31 +96,31 @@ class Clip2ZeusApp(object):
     def expose_api(self):
         """Exposes a collection of commands for the XML-RPC server"""
 
+        logger.debug('Exposing API')
         for func in Clip2ZeusApp.EXPOSED:
+            logger.debug(' - %s' % func)
             self.server.register_function(getattr(self, func))
 
     def start(self):
         """Begins processing"""
 
+        logger.debug('Beginning Clip2Zeus')
         self.monitor_thread.start()
         self.start_server()
 
     def start_server(self):
         """Starts the XML-RPC server"""
 
+        if not port_is_free(self.port):
+            logger.error('Port %s is already being used.' % self.port)
+            self.quit()
+            sys.exit(1)
+
         try:
-            self.server = Server(('localhost', self.port), allow_none=True)
+            logger.debug('Starting server...')
+            self.server = Server(('localhost', self.port), allow_none=True, logRequests=False)
             self.expose_api()
             self.server.serve_forever()
-        except socket.error, err:
-            # my sad excuse for a graceful termination
-            errno = err[0]
-            if errno == 9:
-                pass
-            elif errno == 48: # address already used
-                pass
-            else:
-                raise err
         except KeyboardInterrupt:
             self.quit()
 
@@ -143,12 +186,13 @@ class Clip2ZeusApp(object):
         Use 0 to represent manual invocation."""
 
         try:
+            logger.debug('Updating interval to %s' % interval)
             self.interval = int(interval)
 
             if self.interval < 0:
                 raise ValueError
         except (TypeError, ValueError):
-            raise TypeError('Please specify an integer that is 0 or greater.')
+            raise ValueError('Please specify an integer that is 0 or greater.')
 
     def monitor_clipboard(self):
         """Regularly checks the system clipboard for data"""
@@ -174,6 +218,9 @@ class Clip2ZeusApp(object):
             data = self.check_clipboard()
 
             if data and data != self.data:
+                logger.info('Found new clipboard data to process.')
+                logger.debug('Old data: %s' % (self.data, ))
+                logger.debug('New data: %s' % (data, ))
                 self.process_clipboard(data)
 
     def process_clipboard(self, data):
@@ -181,6 +228,8 @@ class Clip2ZeusApp(object):
 
         If one or more are found, they will be replaced with a 2zeus-shortened
         version of the longer URL."""
+
+        logger.info('Shortening URLs in clipboard')
 
         update_data = False
         matches = URL_RE.findall(data)
@@ -197,6 +246,7 @@ class Clip2ZeusApp(object):
                 })
 
                 try:
+                    logger.info(' - %s' % url)
                     c = urllib2.urlopen('http://2ze.us/generate/', params)
                 except (urllib2.HTTPError, urllib2.URLError):
                     # do something?
@@ -206,21 +256,25 @@ class Clip2ZeusApp(object):
                     update_data = True
                     raw = c.read()
                     try:
-                        json = simplejson.loads(raw)
+                        usable = json.loads(raw)
                     except (ValueError, ):
-                        json = None
+                        usable = None
 
-                if json:
-                    data = data.replace(url, json['urls'][url]['shortcut'])
+                if usable:
+                    short = usable['urls'][url]['shortcut']
+                    logger.info('   -> %s' % short)
+                    data = data.replace(url, short)
+
+        self.data = data
 
         if update_data:
-            self.data = data
+            logger.debug('Updating clipboard')
             self.update_clipboard(self.data)
 
     def quit(self):
         """Ends processing"""
 
-        print 'Exiting.'
+        logger.info('Exiting.')
         self.thread_event.set()
         self.monitor_thread.join()
         self.server.kill()
@@ -236,32 +290,16 @@ class Clip2ZeusCtl(object):
         self.proxy = None
         self.connect()
 
-    def launch_server(self):
-        """Launches the server if needed--not a good idea with the CLI command"""
-
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('localhost', DEFAULT_PORT))
-        except socket.error, err:
-            if err[0] == 48: # address already in use
-                pass
-            else:
-                raise err
-        else:
-            sock.close()
-            from clip2zeus import main
-            self.server_thread = Thread(target=main)
-            self.server_thread.start()
-            time.sleep(1)
-
     def notify(self, message):
         """Tells the user something"""
 
+        logger.debug('Received message: %s' % (message, ))
         print message
 
     def execute_command(self, cmd, args=[]):
         """Calls a command using the XML-RPC proxy"""
 
+        logger.debug('Executing command "%s" via XML-RPC' % (cmd, ))
         try:
             if cmd == 'help':
                 self.help(*args)
@@ -269,23 +307,30 @@ class Clip2ZeusCtl(object):
                 func = getattr(self.proxy, cmd)
                 func(*args)
             else:
+                logger.error('Invalid command: %s' % (cmd, ))
                 sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))
         except socket.error, err:
-            self.notify('Failed to connect to application: %s' % err)
+            self.notify('Failed to connect to application: %s' % (err[1], ))
 
-            if err[0] == 61:
+            if err[0] in (48, 61, 10061):
                 sys.exit(1)
         except xmlrpclib.Fault, fault:
-            self.notify('%s' % fault)
+            self.notify('%s' % (fault, ))
 
-    def connect(self, port=None):
+    def connect(self, port=DEFAULT_PORT):
         """Attempt to connect to the XML-RPC server"""
+
+        logger.debug('Connecting to XML-RPC server')
+        if port_is_free(port):
+            logger.error('Port is not in use')
+            sys.exit(1)
 
         try:
             port = port or self.port
             self.proxy = xmlrpclib.ServerProxy('http://localhost:%s/' % port, allow_none=True)
         except Exception, e:
-            print e
+            logger.error('%s' % (e, ))
+            raise e
         else:
             self.port = port
 

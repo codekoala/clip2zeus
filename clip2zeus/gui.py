@@ -14,7 +14,7 @@ import sys
 import tkMessageBox
 
 from clip2zeus_ctl import Clip2ZeusCtl
-from common import APP_TITLE, DEFAULT_PORT
+from common import APP_TITLE, DEFAULT_PORT, logger
 
 ID_MANUAL = 100
 ID_AUTO = 110
@@ -24,16 +24,17 @@ class Clip2ZeusTk(Clip2ZeusCtl):
     def __init__(self, ):
         super(Clip2ZeusTk, self).__init__()
 
-        self.launch_server()
         self.build_gui()
         self.parent.mainloop()
 
     def build_gui(self):
         """Constructs the GUI"""
 
+        logger.debug('Building GUI')
         self.parent = tk.Tk()
         self.parent.title(APP_TITLE)
 
+        logger.debug('Creating widgets')
         self.opt_value = tk.IntVar()
         self.opt_poll = tk.Radiobutton(self.parent, text='Automatic shortening',
             value=ID_AUTO, variable=self.opt_value, command=self.mode_selected)
@@ -45,6 +46,7 @@ class Clip2ZeusTk(Clip2ZeusCtl):
         self.btn_shorten = tk.Button(self.parent, text="Shorten", command=self.check_clipboard)
         self.btn_quit = tk.Button(self.parent, text="Quit", command=self.quit)
 
+        logger.debug('Arranging widgets')
         self.opt_manual.grid(row=0, column=0, sticky='w')
         self.opt_poll.grid(row=1, column=0, sticky='w')
         self.btn_shorten.grid(row=0, column=1, sticky='e')
@@ -54,11 +56,13 @@ class Clip2ZeusTk(Clip2ZeusCtl):
     def notify(self, message):
         """Tells the user something"""
 
+        logger.info('Received message: %s' % (message, ))
         tkMessageBox.showwarning(message=message)
 
     def check_clipboard(self):
         """Checks the clipboard for URLs that need to be shortened"""
 
+        logger.debug('Checking clipboard')
         self.execute_command('shorten_urls')
 
     def mode_selected(self, interval=-1):
