@@ -42,7 +42,6 @@ def port_is_free(port=None):
         sock.bind(('localhost', port))
     except socket.error, err:
         logger.debug('Caught an exception: %s' % (err,))
-        logger.debug(err[0], type(err[0]))
         if err[0] in (48, 10048, 10061): # address already in use
             return False
         else:
