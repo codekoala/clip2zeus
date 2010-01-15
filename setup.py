@@ -3,6 +3,7 @@ from clip2zeus import APP_TITLE, __version__, __author__
 import sys
 
 extra = dict()
+excludes = []
 
 # Make sure we have the appropriate libraries
 if sys.platform in ('nt', 'win32'):
