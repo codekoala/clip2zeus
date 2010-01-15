@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from common import Clip2ZeusApp, Clip2ZeusCtl, DEFAULT_PORT
+from clip2zeus.common import Clip2ZeusApp, Clip2ZeusCtl, DEFAULT_PORT
 
 def main():
     from optparse import OptionParser

@@ -13,15 +13,16 @@ except ImportError:
 import sys
 import tkMessageBox
 
-from clip2zeus_ctl import Clip2ZeusCtl
-from common import APP_TITLE, DEFAULT_PORT, logger
+from clip2zeus.clip2zeus_ctl import Clip2ZeusCtl
+from clip2zeus.config import config, APP_TITLE, DEFAULT_PORT
+from clip2zeus.globals import logger
 
 ID_MANUAL = 100
 ID_AUTO = 110
 
 class Clip2ZeusTk(Clip2ZeusCtl):
 
-    def __init__(self, ):
+    def __init__(self):
         super(Clip2ZeusTk, self).__init__()
 
         self.build_gui()
@@ -53,6 +54,10 @@ class Clip2ZeusTk(Clip2ZeusCtl):
         self.btn_quit.grid(row=1, column=1, sticky='e')
         self.scl_interval.grid(row=2, column=0, sticky='w')
 
+        cur_interval = self.execute_command('get_interval')
+        logger.debug('Received "%s" as the current interval' % (cur_interval,))
+        #self.scl_interval.set(cur_interval)
+
     def notify(self, message):
         """Tells the user something"""
 
@@ -68,6 +73,9 @@ class Clip2ZeusTk(Clip2ZeusCtl):
     def mode_selected(self, interval=-1):
         """Sets the polling mode--automatic vs manual"""
 
+        cur_interval = self.execute_command('get_interval')
+        logger.debug('Received "%s" as the current interval' % (cur_interval,))
+        logger.debug('Setting poll mode: %s' % (interval,))
         if int(interval) == 0:
             self.opt_value.set(ID_MANUAL)
             self.opt_manual.select()

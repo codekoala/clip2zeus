@@ -6,7 +6,7 @@ pygtk.require('2.0')
 import gtk
 import time
 
-from common import Clip2ZeusApp
+from clip2zeus.common import Clip2ZeusApp
 
 class Clip2ZeusLinux(Clip2ZeusApp):
 

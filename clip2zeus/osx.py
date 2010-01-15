@@ -1,6 +1,6 @@
 import subprocess
 import time
-from common import Clip2ZeusApp
+from clip2zeus.common import Clip2ZeusApp
 
 class Clip2ZeusOSX(Clip2ZeusApp):
 

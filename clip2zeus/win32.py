@@ -8,7 +8,7 @@ using 2ze.us
 
 import time
 import win32clipboard as w
-from common import Clip2ZeusApp
+from clip2zeus.common import Clip2ZeusApp
 
 class Clip2ZeusWin32(Clip2ZeusApp):
 

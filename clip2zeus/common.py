@@ -1,7 +1,5 @@
-from SimpleXMLRPCServer import SimpleXMLRPCServer
 from datetime import datetime, timedelta
 from threading import Thread, Event
-import logging
 import re
 
 try:
@@ -17,76 +15,28 @@ import urllib
 import urllib2
 import xmlrpclib
 
+from clip2zeus.globals import *
+from clip2zeus.config import *
+
 __author__ = 'Josh VanderLinden'
-__version__ = '0.8e'
-
-APP_TITLE = 'Clip2Zeus'
-DELIM = ' \n\r<>"\''
-URL_RE = re.compile('((\w+)://([^/%%%s]+)(/?[^%s]*))' % (DELIM, DELIM), re.I | re.M)
-INVALID_DOMAINS = ('2ze.us', 'bit.ly', 'tinyurl.com', 'tr.im', 'is.gd')
-
-HEARTBEAT_INT = 30 # Interval to ensure we have a connection to 2ze.us (seconds)
-TIMEOUT_SEC = 10 # Number of seconds to wait on 2ze.us before giving up
-DEFAULT_PORT = 14694
-LOG_FILE = 'clip2zeus.log'
-LOG_LEVEL = logging.DEBUG
-FORMAT = '%(asctime)10s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-
-logging.basicConfig(level=LOG_LEVEL,
-                    format='%(levelname)-8s %(asctime)s %(module)s:%(lineno)d %(message)s',
-                    datefmt='%d.%m %H:%M:%S',
-                    filename=LOG_FILE,
-                    filemode='a')
-logger = logging.getLogger('Clip2Zeus')
-
-def port_is_free(port):
-    """Ensures that a port is available for binding"""
-
-    try:
-        port = int(port)
-        logger.debug('Testing port %s' % port)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(('localhost', port))
-    except socket.error, err:
-        logger.debug('Caught an exception: %s' % (err, ))
-        logger.debug(err[0], type(err[0]))
-        if err[0] in (48, 10048, 10061): # address already in use
-            return False
-        else:
-            raise err
-    else:
-        logger.debug('I was able to bind to port %s... unbinding.' % port)
-        sock.close()
-        return True
-
-class UnsupportedPlatformError(StandardError): pass
-
-class Server(SimpleXMLRPCServer):
-    """Wrapper to allow more graceful termination"""
-
-    def serve_forever(self):
-        self.quit = False
-        while not self.quit:
-            self.handle_request()
-
-    def kill(self):
-        self.quit = True
+__version__ = '0.9a'
 
 class Clip2ZeusApp(object):
 
-    EXPOSED = ('help', 'set_interval', 'shorten_urls', 'quit')
+    EXPOSED = ('help', 'get_interval', 'set_interval', 'shorten_urls', 'quit')
 
     def __init__(self, port=DEFAULT_PORT):
         """Creates the container for common functionality"""
 
-        logger.debug('Starting %s v%s' % (APP_TITLE, __version__))
+        logger.debug('Welcome to %s v%s' % (APP_TITLE, __version__))
 
         self.port = int(port)
 
         self.data = ''
+        self.server = None
         self._has_connection = False
         self.last_check = None
-        self.interval = 1
+        self.interval = config.get('main', 'interval', 1)
         self.threshold = timedelta(seconds=HEARTBEAT_INT)
         socket.setdefaulttimeout(TIMEOUT_SEC)
 
@@ -117,7 +67,7 @@ class Clip2ZeusApp(object):
             sys.exit(1)
 
         try:
-            logger.debug('Starting server...')
+            logger.debug('Starting server on port %s...' % self.port)
             self.server = Server(('localhost', self.port), allow_none=True, logRequests=False)
             self.expose_api()
             self.server.serve_forever()
@@ -179,6 +129,12 @@ class Clip2ZeusApp(object):
 
         pass
 
+    def get_interval(self, default=1):
+        """Returns the current polling interval in seconds"""
+
+        logger.debug('Interval requested by client: %s' % (self.interval,))
+        return config.getint('main', 'interval', default)
+
     def set_interval(self, interval):
         """Sets the clipboard polling frequency.
 
@@ -191,7 +147,10 @@ class Clip2ZeusApp(object):
 
             if self.interval < 0:
                 raise ValueError
-        except (TypeError, ValueError):
+
+            config.set('main', 'interval', self.interval)
+        except (TypeError, ValueError), err:
+            logger.error('%s' % (err,))
             raise ValueError('Please specify an integer that is 0 or greater.')
 
     def monitor_clipboard(self):
@@ -277,7 +236,9 @@ class Clip2ZeusApp(object):
         logger.info('Exiting.')
         self.thread_event.set()
         self.monitor_thread.join()
-        self.server.kill()
+
+        if self.server:
+            self.server.kill()
 
 class Clip2ZeusCtl(object):
     """

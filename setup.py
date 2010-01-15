@@ -7,18 +7,42 @@ extra = dict()
 # Make sure we have the appropriate libraries
 if sys.platform in ('nt', 'win32'):
     import py2exe
-    excludes = (
+    excludes = [
         'email.Generator', 'email.Iterators', 'email.Utils',
+    ]
+
+    class Target(object):
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+            self.version = __version__
+            self.company_name = __author__
+            self.copyright = 'Copyright 2010 Josh VanderLinden'
+            self.name = APP_TITLE
+
+    service = Target(
+        description="Clip2Zeus URL Shortening Service",
+        modules=['clip2zeus.clip2zeus_service'],
+        cmdline_style='pywin32',
+    )
+
+    gui = Target(
+        description="Clip2Zeus GUI",
+        script='clip2zeus/gui.py',
+        dest_base='tkclip2zeus',
     )
 
     extra = dict(
-        console=['clip2zeus/clip2zeus.py'],
-        excludes=excludes,
+        console=[
+            'clip2zeus/clip2zeus_ctl.py',
+            'clip2zeus/main.py',
+        ],
+        service=[service],
+        windows=[gui],
     )
 elif sys.platform in ('darwin', ):
     import py2app
     extra = dict(
-        app=['clip2zeus/clip2zeus.py'],
+        app=['clip2zeus/main.py'],
     )
 
 setup(
@@ -42,6 +66,7 @@ setup(
     ],
     package_dir={'clip2zeus': 'clip2zeus'},
     packages=['clip2zeus'],
+    py_modules=['clip2zeus.common'],
     platforms=[
         'Windows',
         'OSX',
@@ -54,7 +79,13 @@ setup(
             bundle_files=1,
             includes = [
                 'simplejson',
-            ]
+                'win32serviceutil',
+                'win32service',
+                'win32clipboard',
+                'clip2zeus.common',
+                'Tkinter',
+            ],
+            excludes=excludes,
         ),
         'py2app': dict(
             iconfile='clip2zeus/res/clip2zeus.icns',

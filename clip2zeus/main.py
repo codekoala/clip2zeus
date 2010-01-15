@@ -6,7 +6,7 @@ Monitors the system clipboard for text that contains URLs for conversion
 using 2ze.us
 """
 
-from common import *
+from clip2zeus.common import *
 
 def main():
     from optparse import OptionParser
