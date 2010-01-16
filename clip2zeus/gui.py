@@ -42,7 +42,8 @@ class Clip2ZeusTk(Clip2ZeusCtl):
         self.opt_manual = tk.Radiobutton(self.parent, text='Manual shortening',
             value=ID_MANUAL, variable=self.opt_value, command=self.mode_selected)
         self.scl_interval = tk.Scale(self.parent, from_=0, to=30,
-            label='Interval', orient=tk.HORIZONTAL, tickinterval=10, command=self.mode_selected)
+            label='Interval', orient=tk.HORIZONTAL, tickinterval=10,
+            command=self.mode_selected)
 
         self.btn_shorten = tk.Button(self.parent, text="Shorten", command=self.check_clipboard)
         self.btn_quit = tk.Button(self.parent, text="Quit", command=self.quit)
@@ -50,13 +51,15 @@ class Clip2ZeusTk(Clip2ZeusCtl):
         logger.debug('Arranging widgets')
         self.opt_manual.grid(row=0, column=0, sticky='w')
         self.opt_poll.grid(row=1, column=0, sticky='w')
-        self.btn_shorten.grid(row=0, column=1, sticky='e')
-        self.btn_quit.grid(row=1, column=1, sticky='e')
-        self.scl_interval.grid(row=2, column=0, sticky='w')
+        self.btn_shorten.grid(row=0, column=1, sticky='we')
+        self.btn_quit.grid(row=1, column=1, sticky='we')
+        self.scl_interval.grid(row=2, column=0, columnspan=2, sticky='we')
 
         cur_interval = self.execute_command('get_interval')
         logger.debug('Received "%s" as the current interval' % (cur_interval,))
-        #self.scl_interval.set(cur_interval)
+        self.scl_interval.set(cur_interval)
+
+        self.parent.columnconfigure(0, weight=1)
 
     def notify(self, message):
         """Tells the user something"""

@@ -133,7 +133,7 @@ class Clip2ZeusApp(object):
         """Returns the current polling interval in seconds"""
 
         logger.debug('Interval requested by client: %s' % (self.interval,))
-        return config.getint('main', 'interval', default)
+        return self.interval
 
     def set_interval(self, interval):
         """Sets the clipboard polling frequency.
@@ -266,7 +266,7 @@ class Clip2ZeusCtl(object):
                 self.help(*args)
             elif cmd in Clip2ZeusApp.EXPOSED:
                 func = getattr(self.proxy, cmd)
-                func(*args)
+                return func(*args)
             else:
                 logger.error('Invalid command: %s' % (cmd, ))
                 sys.exit('Invalid command.  Options include: %s' % ', '.join(Clip2ZeusApp.EXPOSED))

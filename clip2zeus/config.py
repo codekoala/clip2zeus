@@ -79,5 +79,5 @@ DEFAULT_PORT = config.getint('main', 'port', 14694)
 
 LOG_FILE = os.path.join(CONFIG_DIR, 'clip2zeus.log')
 LOG_LEVEL = logging.DEBUG
-LOG_FORMAT = '%(levelname)-8s %(asctime)s %(module)s:%(lineno)d %(message)s'
+LOG_FORMAT = '%(levelname)-8s %(asctime)s [%(process)d]%(module)s:%(lineno)d %(message)s'
 
