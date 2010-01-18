@@ -5,7 +5,8 @@ clip2zeus/clip2zeus.py
 clip2zeus/clip2zeus_service.py
 clip2zeus/clip2zeus_ctl.py
 clip2zeus/common.py
-clip2zeus/global.py
+clip2zeus/config.py
+clip2zeus/globals.py
 clip2zeus/gui.py
 clip2zeus/linux.py
 clip2zeus/osx.py

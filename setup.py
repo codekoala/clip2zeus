@@ -67,7 +67,11 @@ setup(
     ],
     package_dir={'clip2zeus': 'clip2zeus'},
     packages=['clip2zeus'],
-    py_modules=['clip2zeus.common'],
+    py_modules=[
+        'clip2zeus.common',
+        'clip2zeus.config',
+        'clip2zeus.globals',
+    ],
     platforms=[
         'Windows',
         'OSX',
