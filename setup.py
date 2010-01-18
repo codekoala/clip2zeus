@@ -71,6 +71,7 @@ setup(
         'clip2zeus.common',
         'clip2zeus.config',
         'clip2zeus.globals',
+        'clip2zeus.main',
     ],
     platforms=[
         'Windows',

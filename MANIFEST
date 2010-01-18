@@ -9,6 +9,7 @@ clip2zeus/config.py
 clip2zeus/globals.py
 clip2zeus/gui.py
 clip2zeus/linux.py
+clip2zeus/main.py
 clip2zeus/osx.py
 clip2zeus/win32.py
 clip2zeus/scripts/clip2zeus
