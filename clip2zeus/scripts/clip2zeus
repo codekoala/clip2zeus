@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
-from clip2zeus import main
+from clip2zeus.main import main
 
 main()
+

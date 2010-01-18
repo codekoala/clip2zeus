@@ -19,7 +19,7 @@ from clip2zeus.globals import *
 from clip2zeus.config import *
 
 __author__ = 'Josh VanderLinden'
-__version__ = '0.9a'
+__version__ = '0.9b'
 
 class Clip2ZeusApp(object):
 
