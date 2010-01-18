@@ -1,3 +1,4 @@
-from clip2zeus.common import *
-from clip2zeus.common import __version__, __author__
+APP_TITLE = 'Clip2Zeus'
+__author__ = 'Josh VanderLinden'
+__version__ = '0.9b'
 

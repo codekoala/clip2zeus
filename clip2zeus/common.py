@@ -15,15 +15,13 @@ import urllib
 import urllib2
 import xmlrpclib
 
+from clip2zeus import APP_TITLE, __version__
 from clip2zeus.globals import *
 from clip2zeus.config import *
 
-__author__ = 'Josh VanderLinden'
-__version__ = '0.9b'
-
 class Clip2ZeusApp(object):
 
-    EXPOSED = ('help', 'get_interval', 'set_interval', 'shorten_urls', 'quit')
+    EXPOSED = ('help', 'get_version', 'get_interval', 'set_interval', 'shorten_urls', 'quit')
 
     def __init__(self, port=DEFAULT_PORT):
         """Creates the container for common functionality"""
@@ -108,6 +106,11 @@ class Clip2ZeusApp(object):
             self.last_check = now
 
         return self._has_connection
+
+    def get_version(self):
+        """Retrieves the version number for the server"""
+
+        return __version__
 
     def help(self, func=None):
         """Provides further information about a particular command"""

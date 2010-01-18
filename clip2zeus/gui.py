@@ -13,8 +13,9 @@ except ImportError:
 import sys
 import tkMessageBox
 
+from clip2zeus import APP_TITLE
 from clip2zeus.clip2zeus_ctl import Clip2ZeusCtl
-from clip2zeus.config import config, APP_TITLE, DEFAULT_PORT
+from clip2zeus.config import config, DEFAULT_PORT
 from clip2zeus.globals import logger
 
 ID_MANUAL = 100
@@ -33,7 +34,7 @@ class Clip2ZeusTk(Clip2ZeusCtl):
 
         logger.debug('Building GUI')
         self.parent = tk.Tk()
-        self.parent.title(APP_TITLE)
+        self.parent.title('%s v%s' % (APP_TITLE, self.execute_command('get_version')))
 
         logger.debug('Creating widgets')
         self.opt_value = tk.IntVar()
