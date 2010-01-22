@@ -222,7 +222,7 @@ class Clip2ZeusApp(object):
                     except (ValueError, ):
                         usable = None
 
-                if usable:
+                if usable and usable['urls'].get(url, None):
                     short = usable['urls'][url]['shortcut']
                     logger.info('   -> %s' % short)
                     data = data.replace(url, short)
