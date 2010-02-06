@@ -15,6 +15,7 @@ class Clip2ZeusWin32(Clip2ZeusApp):
     def do_clipboard_operation(self, func, *args, **kwargs):
         """Performs a quick clipboard operation, wrapping it with safety nets"""
 
+        result = ''
         try:
             w.OpenClipboard()
         except Exception, err:
