@@ -28,7 +28,10 @@ class Clip2ZeusApp(object):
 
         logger.debug('Welcome to %s v%s' % (APP_TITLE, __version__))
 
-        self.port = int(port)
+        try:
+            self.port = int(port)
+        except ValueError:
+            self.port = DEFAULT_PORT
 
         self.data = ''
         self.server = None
